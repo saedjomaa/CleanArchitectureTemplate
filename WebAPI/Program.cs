@@ -1,0 +1,44 @@
+using Application;
+using Infrastructure;
+using Serilog;
+using WebAPI.Diagnostics;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSerilog((services, logging) => logging
+    .ReadFrom.Configuration(builder.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"));
+
+builder.Services.AddControllers();
+builder.Services.AddOpenApi();
+builder.Services.AddHealthChecks();
+builder.Services.AddProblemDetails(options =>
+    options.CustomizeProblemDetails = context =>
+        context.ProblemDetails.Extensions["correlationId"] = context.HttpContext.TraceIdentifier);
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(
+    builder.Configuration.GetConnectionString("School")
+    ?? throw new InvalidOperationException("The School connection string is required."));
+
+var app = builder.Build();
+await app.Services.MigrateDatabaseAsync(app.Lifetime.ApplicationStopping);
+
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseExceptionHandler();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapHealthChecks("/health");
+app.MapControllers();
+
+app.Run();
