@@ -3,23 +3,38 @@
 @databaseCourseId = aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2
 @webApiCourseId = aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3
 
+# OpenAPI document
 GET {{WebAPI_HostAddress}}/openapi/v1.json
 Accept: application/json
 
 ###
 
+# GetWeatherForecast
 GET {{WebAPI_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
 
-# List the seeded students and courses
+# List students
 GET {{WebAPI_HostAddress}}/api/students?page=1&pageSize=20
 Accept: application/json
 
 ###
 
+# Get a student by ID
+GET {{WebAPI_HostAddress}}/api/students/{{studentId}}
+Accept: application/json
+
+###
+
+# List courses
 GET {{WebAPI_HostAddress}}/api/courses?page=1&pageSize=20
+Accept: application/json
+
+###
+
+# Get a course by ID
+GET {{WebAPI_HostAddress}}/api/courses/{{databaseCourseId}}
 Accept: application/json
 
 ###
@@ -44,8 +59,8 @@ Content-Type: application/json
 
 ###
 
-# Enroll the same student in two additional courses
-POST {{WebAPI_HostAddress}}/api/students/{{studentId}}/courses
+# CreateEnrollment for Database Fundamentals (expected HTTP 204)
+POST {{WebAPI_HostAddress}}/api/students/{{studentId}}/enrollments
 Content-Type: application/json
 
 {
@@ -54,7 +69,8 @@ Content-Type: application/json
 
 ###
 
-POST {{WebAPI_HostAddress}}/api/students/{{studentId}}/courses
+# CreateEnrollment for ASP.NET Core Web API (expected HTTP 204)
+POST {{WebAPI_HostAddress}}/api/students/{{studentId}}/enrollments
 Content-Type: application/json
 
 {
@@ -63,14 +79,14 @@ Content-Type: application/json
 
 ###
 
-# List all courses for the student, including the seeded enrollment
+# List courses a student is enrolled in (includes the seeded enrollment)
 GET {{WebAPI_HostAddress}}/api/students/{{studentId}}/courses
 Accept: application/json
 
 ###
 
-# Repeat an enrollment to see HTTP 409 Conflict
-POST {{WebAPI_HostAddress}}/api/students/{{studentId}}/courses
+# Repeat CreateEnrollment for Database Fundamentals (expected HTTP 409)
+POST {{WebAPI_HostAddress}}/api/students/{{studentId}}/enrollments
 Content-Type: application/json
 
 {
@@ -79,4 +95,5 @@ Content-Type: application/json
 
 ###
 
+# Health check
 GET {{WebAPI_HostAddress}}/health

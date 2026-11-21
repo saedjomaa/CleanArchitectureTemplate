@@ -5,17 +5,17 @@ using Application.Courses;
 using Application.Courses.Commands.CreateCourse;
 using Application.Courses.Queries.GetCourse;
 using Application.Courses.Queries.ListCourses;
-using Application.Shared.Routes;
 using Microsoft.AspNetCore.Mvc;
 using WebAPI.Diagnostics;
 
 namespace WebAPI.Controllers;
 
 [ApiController]
-[Route(RouteConsts.Courses)]
+[Route("api/courses")]
 public sealed class CoursesController : ControllerBase
 {
     [HttpPost]
+    [EndpointSummary("Create a course")]
     public async Task<ActionResult<Guid>> Create(
         CreateCourseCommand command,
         [FromServices] ICommandHandler<CreateCourseCommand, Result<Guid>> handler,
@@ -27,7 +27,8 @@ public sealed class CoursesController : ControllerBase
             : result.ToProblemDetails(HttpContext);
     }
 
-    [HttpGet(RouteConsts.ById)]
+    [HttpGet("{id:guid}")]
+    [EndpointSummary("Get a course by ID")]
     public async Task<ActionResult<CourseResponse>> Get(
         Guid id,
         [FromServices] IQueryHandler<GetCourseQuery, Result<CourseResponse>> handler,
@@ -38,6 +39,7 @@ public sealed class CoursesController : ControllerBase
     }
 
     [HttpGet]
+    [EndpointSummary("List courses")]
     public async Task<ActionResult<PagedResult<CourseResponse>>> List(
         [FromServices] IQueryHandler<ListCoursesQuery, Result<PagedResult<CourseResponse>>> handler,
         CancellationToken cancellationToken,
