@@ -30,7 +30,8 @@ Handlers depend on repository interfaces and `IUnitOfWork`, never on `DbContext`
   - `DbUpdateConcurrencyException` → `PersistenceErrors.ConcurrencyConflict`
   - SQLite primary-key or unique violation → `PersistenceErrors.DuplicateKey`
 - Handlers translate a `PersistenceErrors` value to the module's own error when the meaning is known (e.g. `DuplicateKey` → `EnrollmentErrors.AlreadyEnrolled`). Otherwise they return the result as is. Handlers never use `try/catch` for persistence errors.
-- Repositories and `IUnitOfWork` are registered manually as scoped services in `AddInfrastructure()`, so they share the same `DbContext`. Every new repository needs a registration line there.
+- Repositories are registered automatically as scoped services in `AddInfrastructure()` with Scrutor: every class in the Infrastructure assembly whose name ends with `Repository` is registered under its matching interface (`AsMatchingInterface`: `StudentRepository` → `IStudentRepository`). No manual registration is needed, but the class and interface names must match exactly. A class ending with `Repository` without a matching interface is not registered. Keep repositories in `Infrastructure/Persistence/Repositories` for organization; the scan does not depend on the folder.
+- `IUnitOfWork` is registered manually (`SchoolUnitOfWork` does not follow the `I[ClassName]` naming). Everything is scoped, so repositories and the Unit of Work share the same `DbContext` per request.
 
 ## EF Core Entity Configuration
 - Each persisted entity must define its EF Core mapping in `[EntityName]Configuration.cs` under `Infrastructure/Persistence/Configurations` using `IEntityTypeConfiguration<TEntity>`.
@@ -150,7 +151,7 @@ Application/
 1. Check `Requirements.md` for the business rules; add the new rule there if it is missing.
 2. Create the folder under `[Module]/Commands` or `[Module]/Queries`.
 3. Add the command or query record, its handler, and its validator (see Validation). Add a response record where needed.
-4. Add or reuse repository methods (see Data Access). Register any new repository in `AddInfrastructure()`.
+4. Add or reuse repository methods (see Data Access). A new repository is registered automatically when it is named `[EntityName]Repository` and implements `I[EntityName]Repository`.
 5. Add errors to `[Module]Errors.cs` if needed.
 6. If the model changed, add a migration with the EF Core CLI (see Migrations).
 7. Add the controller action following the Controllers section, and an example request in `WebAPI.http`.
