@@ -1,87 +1,55 @@
 # AGENTS.md
 
 ## Stack
-- .NET 11, ASP.NET Core Web API with **Controllers**
-- Clean Architecture + CQRS + Repository Pattern
-- **No MediatR/Mediator. No AutoMapper** (manual mapping only)
-- FluentValidation, EF Core, Scrutor, Serilog
 
-## Layers (dependencies point inward only)
-- `Domain`: entities, enums, domain exceptions. References nothing.
-- `Application`: commands, queries, handlers, validators, mappings, repository interfaces, and `IUnitOfWork`. References Domain.
-- `Infrastructure`: EF Core, repositories, migrations, and external services. Implements Application interfaces.
-- `WebAPI`: controllers, `Program.cs`. Composition root.
+- Use ASP.NET Core Web API with Controllers, Clean Architecture, CQRS, and Repository Pattern.
+- Use EF Core, FluentValidation, Scrutor, and Serilog.
+- Use direct handler injection and manual mapping. Do not add MediatR, a mediator abstraction, or AutoMapper.
+- Keep the target framework, nullable settings, and implicit usings in `Directory.Build.props`.
 
-Handlers depend on repository and unit-of-work interfaces. Keep EF Core queries and provider errors in Infrastructure.
+## Layers
+
+- `Domain` owns entities, value objects, enums, and business rules. It has no project dependencies. Use domain methods and private setters to protect entity state.
+- `Application` owns commands, queries, handlers, validators, responses, results, repository interfaces, and `IUnitOfWork`. It references Domain.
+- `Infrastructure` implements Application interfaces and owns EF Core, repository implementations, migrations, and external integrations.
+- `WebAPI` owns controllers, HTTP routes, OpenAPI metadata, and HTTP responses. `Program.cs` is the composition root.
 
 ## EF Core Entity Configuration
+
 - Each persisted entity must define its EF Core mapping in `[EntityName]Configuration.cs` under `Infrastructure/Persistence/Configurations` using `IEntityTypeConfiguration<TEntity>`.
 - `OnModelCreating` must apply these configurations and call `SchoolSeed.Configure(modelBuilder)`.
-- Implement repositories in `Infrastructure/Persistence/Repositories`. Register repositories and the unit of work as scoped services sharing the same DbContext.
 
-## Application Structure
-```
-Application/
-  Common/
-    Abstractions/   (handler interfaces, repository interfaces, IUnitOfWork)
-    Results/        (Result, Error)
-  [Module]/
-    Commands/[UseCaseName]/
-    Queries/[UseCaseName]/
-  Shared/
-    Errors/[Module]Errors.cs
-  DependencyInjection.cs
-```
+## Use Cases
 
-## File Naming
-- `[UseCaseName]Command.cs` / `[UseCaseName]Query.cs`
-- `[UseCaseName]CommandHandler.cs` / `[UseCaseName]QueryHandler.cs`
-- `[UseCaseName]CommandValidator.cs`
-- `[UseCaseName]QueryValidator.cs`
-- `[UseCaseName]Mapping.cs` only if 2+ mappings; otherwise map inside the handler
+- Put each operation under `Application/[Module]/Commands/[UseCaseName]` or `Application/[Module]/Queries/[UseCaseName]`.
+- Use `[UseCaseName]Command.cs` or `[UseCaseName]Query.cs` for the request, with matching `CommandHandler`, `QueryHandler`, `CommandValidator`, and `QueryValidator` filenames.
+- Use plain records for commands and queries without marker interfaces. Use `internal sealed` handlers with primary constructors and pass `CancellationToken` through async calls.
+- Commands change state and return `Result<T>` when they return data or `Result` otherwise. Queries are read-only and return `Result<TResponse>`.
+- Handlers load data through interfaces, call domain methods, and coordinate saving. Keep business rules in Domain.
+- Put expected errors in `Application/Shared/Errors/[Module]Errors.cs`. Return them in failed results.
+- Run validation and handler logging through decorators. Add a validator for every command, every paginated query, and other queries with input constraints.
+- Keep a single manual conversion inline. When a use case needs two or more conversions, use `[UseCaseName]Mapping.cs` with methods such as `ToEntity` and `ToResponse`. Keep EF Core projections in repositories.
 
-## Rules
-- Commands change state and return `Result<T>` when there is a response payload (e.g. `Result<Guid>` for a created entity ID), or `Result` when there is no payload. Queries are read-only and return `Result<TResponse>`. Repositories use `AsNoTracking()` and project directly to response types for EF Core reads.
-- Commands and queries are plain records. No marker interfaces.
-- Handlers: `internal sealed`, primary constructor, return `Result` or `Result<T>` according to the command or query contract, always pass `CancellationToken`.
-- For expected failures (NotFound, Validation, Conflict), return a failed `Result` or `Result<T>` containing an `Error`.
-- Mappings are manual extension methods (`ToEntity`, `ToResponse`).
-- Controllers: no business logic. Inject handlers per action with `[FromServices]`, convert `Result` with `ToProblemDetails()`.
-- Use `ValidationDecorator` to validate commands and queries that have a registered validator. Use a logging decorator for handler execution. Follow the Transactions section for transaction handling.
-- DI: `Application` exposes `AddApplication()`, and `Infrastructure` exposes `AddInfrastructure()`. In `AddApplication()`, use Scrutor to register command and query handlers as scoped services under their handler interfaces. Set `publicOnly: false` in `AddClasses` to include `internal sealed` handlers.
+## Persistence
 
-## Cross-Cutting Rules
+- Put repository contracts and `IUnitOfWork` in `Application/Common/Abstractions`, and implementations in `Infrastructure/Persistence/Repositories`.
+- Define repository boundaries around feature or aggregate needs. Keep `DbContext`, `DbSet<T>`, `IQueryable<T>`, and provider-specific errors inside Infrastructure.
+- Give each persisted entity a `[EntityName]Configuration.cs` file under `Infrastructure/Persistence/Configurations` implementing `IEntityTypeConfiguration<TEntity>`. Use `OnModelCreating` to apply configurations and call a separate seed configuration when needed.
+- Use `AsNoTracking()` and project directly to the response for read-only EF Core queries.
+- Register repositories and `IUnitOfWork` as scoped services sharing the same `DbContext`. Repositories stage writes. Commit once per command through `IUnitOfWork.SaveChangesAsync` by default. For multiple saves that must succeed together, expose an explicit transaction through an Application interface.
+- Enforce uniqueness in the database. Use a provider-appropriate concurrency token where concurrent changes matter. For client-driven updates, return `rowVersion` in reads, require it on updates, and use the client value as the expected version when saving. Translate persistence conflicts in Infrastructure and return HTTP `409`.
+- List queries return `Result<PagedResult<T>>` with `items`, `page`, `pageSize`, and `totalCount`. Enforce the default and maximum page size through shared pagination settings and query validation. Use shared filtering and sorting conventions with a stable order.
 
-**Global error handling**
-- Unexpected exceptions are handled by a single `IExceptionHandler` registered in WebAPI that returns a uniform `ProblemDetails`.
-- Never return stack traces or exception messages to the client. Log the exception server-side.
+## API and Operations
 
-**Transactions**
-- Commit each command once through `IUnitOfWork.SaveChangesAsync` by default. Repositories stage changes on the shared DbContext.
-- If a command needs multiple saves in one transaction, expose that transaction through an Application interface and coordinate it within the handler.
+- Keep controllers focused on HTTP. Define routes in WebAPI, inject the handler per action with `[FromServices]`, and convert failed results with `ToProblemDetails()`.
+- Map validation, missing resources, and conflicts to `400`, `404`, and `409`. Use one `IExceptionHandler` for unexpected errors. Log exception details server-side and return a generic `ProblemDetails`.
+- Register Application services in `AddApplication()` and Infrastructure services in `AddInfrastructure()`. Scan handlers as scoped services with Scrutor using `publicOnly: false`, and exclude open generic decorators from the scan. Include internal validators in registration.
+- Use `ILogger<T>` for application logging and Serilog request logging for HTTP. Include a correlation ID in logs, the response header, and `ProblemDetails`. Expose `/health` with a database readiness check.
 
-**Concurrency**
-- Use a concurrency token (`RowVersion`) on entities that support concurrent edits.
-- Include `rowVersion` in read responses and require it in update requests.
-- Use the client-supplied `rowVersion` as the expected version when saving the update.
-- Translate EF Core concurrency exceptions in Infrastructure. Return a `Conflict` error (HTTP 409) when the version is stale or persistence detects a concurrency conflict.
+## Before Finishing
 
-**Pagination and filtering**
-- Every list query returns `Result<PagedResult<T>>` (items, page, pageSize, totalCount).
-- Page size has a default and a hard maximum enforced in the query validator.
-- Filtering and sorting use a shared pattern. Do not invent a new one per endpoint.
-
-**Domain entities**
-- Entities are not anemic: business rules live inside them (`Order.Create(...)`, `order.Cancel()`), with private setters.
-- Handlers orchestrate (load, call domain methods, save). They do not contain business rules.
-
-**Observability**
-- Use **Serilog** for structured logging (inject `ILogger<T>`, no static `Log` calls in application code) with a correlation id on every request (middleware, returned in a response header and included in `ProblemDetails`).
-- Expose health check endpoints (`/health`) from the start.
-
-## New Use Case Checklist
-1. Create the folder under `[Module]/Commands` or `[Module]/Queries`.
-2. Add the command or query record and its handler. Add a validator for every command and every paginated query. For other queries, add a validator when the inputs have constraints. Add a mapping file when there are two or more mappings.
-3. Add errors to `[Module]Errors.cs` if needed.
-4. Add the controller action. No manual DI registration needed.
-5. Run `dotnet build CleanArchitectureTemplate.slnx` from the repository root.
+1. Verify the use case through its normal entry point and check relevant failure cases.
+2. Check for pending EF Core model changes after persistence refactors. If the schema changes, add a migration and verify that it preserves existing data.
+3. Update OpenAPI metadata and `.http` examples when the HTTP contract changes.
+4. Run `dotnet build` for the target solution from the repository root.
