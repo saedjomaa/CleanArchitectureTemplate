@@ -1,6 +1,7 @@
 using Application.Common.Abstractions;
 using Application.Common.Results;
 using Application.Shared.Errors;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Application.Enrollments.Commands.EnrollStudent;
@@ -24,7 +25,7 @@ internal sealed class EnrollStudentCommandHandler(IApplicationDbContext db, Time
             return Result.Failure(CourseErrors.NotFound);
         }
 
-        var enrollment = student.Enroll(course, clock.GetUtcNow());
+        var enrollment = Enrollment.Create(student.Id, course.Id, clock.GetUtcNow());
         return await db.TrySaveEnrollmentAsync(enrollment, cancellationToken)
             ? Result.Success()
             : Result.Failure(EnrollmentErrors.AlreadyEnrolled);

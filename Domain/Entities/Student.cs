@@ -20,9 +20,4 @@ public sealed class Student
             FullName = fullName.Trim()
         };
     }
-
-    public Enrollment Enroll(Course course, DateTimeOffset enrolledAt)
-    {
-        return new Enrollment(Id, course.Id, enrolledAt);
-    }
 }
