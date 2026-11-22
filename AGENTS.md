@@ -19,7 +19,7 @@ Handlers depend on repository interfaces and `IUnitOfWork`, never on `DbContext`
 ## Data Access (Repositories and Unit of Work)
 - Repository interfaces and `IUnitOfWork` live in `Application/Common/Abstractions`. Implementations live in `Infrastructure/Persistence/Repositories` (repositories) and `Infrastructure/Persistence` (`SchoolUnitOfWork`).
 - One repository per aggregate or feature area: `IStudentRepository`, `ICourseRepository`, `IEnrollmentRepository`.
-- `DbContext`, `DbSet<T>`, `IQueryable<T>` and provider-specific types never leave Infrastructure. Repository methods return domain entities, response records, `PagedResult<T>`, `bool`, or small records such as `EnrollmentForCancellation`.
+- `DbContext`, `DbSet<T>`, `IQueryable<T>` and provider-specific types never leave Infrastructure. Repository methods return domain entities, response records from `Application/Common/Responses`, `PagedResult<T>`, `bool`, or small records such as `EnrollmentForCancellation`.
 - Method kinds:
   - **Writes**: `Add` / `Remove` only stage changes. They never call `SaveChangesAsync`.
   - **Loads for a command**: return tracked domain entities, named after the use case that needs them (`GetForEnrollmentAsync`, `GetForCancellationAsync`).
@@ -54,9 +54,9 @@ Application/
     Abstractions/   (ICommandHandler, IQueryHandler, I[Entity]Repository, IUnitOfWork)
     Decorators/     (ValidationDecorator, LoggingDecorator)
     Pagination/     (Pagination, PageQueryValidator)
+    Responses/      (every response record: CourseResponse, EnrollmentResponse, ...)
     Results/        (Result, Error, PagedResult)
   [Module]/
-    [Entity]Response.cs        (only when shared by 2+ use cases)
     Commands/[UseCaseName]/
     Queries/[UseCaseName]/
   Shared/
@@ -68,7 +68,7 @@ Application/
 - `[UseCaseName]Command.cs` / `[UseCaseName]Query.cs`
 - `[UseCaseName]CommandHandler.cs` / `[UseCaseName]QueryHandler.cs`
 - `[UseCaseName]CommandValidator.cs` / `[UseCaseName]QueryValidator.cs`
-- `[ResponseName]Response.cs`: inside the use-case folder when only that use case returns it; in the module root when 2+ use cases return it.
+- `[ResponseName]Response.cs`: every response record lives in `Application/Common/Responses/` with the namespace `Application.Common.Responses`, one file per response, whether one or many use cases return it.
 - `[UseCaseName]Mapping.cs` only if the use case has 2+ mappings; otherwise map inside the handler.
 - `[EntityName]Repository.cs` implementing `I[EntityName]Repository`.
 

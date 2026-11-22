@@ -1,5 +1,5 @@
+using Application.Common.Responses;
 using Application.Common.Results;
-using Application.Courses;
 using Domain.Entities;
 
 namespace Application.Common.Abstractions;

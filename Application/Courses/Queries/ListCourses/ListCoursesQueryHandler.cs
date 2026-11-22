@@ -1,4 +1,5 @@
 using Application.Common.Abstractions;
+using Application.Common.Responses;
 using Application.Common.Results;
 
 namespace Application.Courses.Queries.ListCourses;

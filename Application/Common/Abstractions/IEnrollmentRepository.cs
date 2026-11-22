@@ -1,6 +1,5 @@
+using Application.Common.Responses;
 using Application.Common.Results;
-using Application.Enrollments.Queries.GetEnrollment;
-using Application.Enrollments.Queries.ListStudentCourses;
 using Domain.Entities;
 
 namespace Application.Common.Abstractions;

@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using Application.Common.Abstractions;
+using Application.Common.Responses;
 using Application.Common.Results;
-using Application.Courses;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
