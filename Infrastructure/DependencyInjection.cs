@@ -1,5 +1,7 @@
 using Application.Common.Abstractions;
+using Domain.Entities;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,11 +12,14 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString)
     {
         services.AddDbContext<SchoolDbContext>(options => options.UseSqlite(connectionString));
-        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<SchoolDbContext>());
+        services.AddScoped<IStudentRepository, StudentRepository>();
+        services.AddScoped<ICourseRepository, CourseRepository>();
+        services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
+        services.AddScoped<IUnitOfWork, SchoolUnitOfWork>();
         services.AddHealthChecks().AddDbContextCheck<SchoolDbContext>("database",
             customTestQuery: async (db, cancellationToken) =>
             {
-                await db.Courses.AnyAsync(cancellationToken);
+                await db.Set<Course>().AnyAsync(cancellationToken);
                 return true;
             });
 

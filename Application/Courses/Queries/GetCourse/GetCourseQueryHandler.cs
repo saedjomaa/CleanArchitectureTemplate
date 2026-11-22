@@ -1,20 +1,15 @@
 using Application.Common.Abstractions;
 using Application.Common.Results;
 using Application.Shared.Errors;
-using Microsoft.EntityFrameworkCore;
 
 namespace Application.Courses.Queries.GetCourse;
 
-internal sealed class GetCourseQueryHandler(IApplicationDbContext db)
+internal sealed class GetCourseQueryHandler(ICourseRepository courses)
     : IQueryHandler<GetCourseQuery, Result<CourseResponse>>
 {
     public async Task<Result<CourseResponse>> HandleAsync(GetCourseQuery query, CancellationToken cancellationToken)
     {
-        var course = await db.Courses.AsNoTracking()
-            .Where(course => course.Id == query.Id)
-            .Select(course => new CourseResponse(
-                course.Id, course.Title, course.Capacity, course.EnrolledCount, course.RowVersion))
-            .SingleOrDefaultAsync(cancellationToken);
+        var course = await courses.GetByIdAsync(query.Id, cancellationToken);
 
         return course is null
             ? Result<CourseResponse>.Failure(CourseErrors.NotFound)

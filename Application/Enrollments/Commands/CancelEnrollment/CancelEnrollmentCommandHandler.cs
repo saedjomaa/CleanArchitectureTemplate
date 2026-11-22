@@ -1,37 +1,26 @@
 using Application.Common.Abstractions;
 using Application.Common.Results;
 using Application.Shared.Errors;
-using Microsoft.EntityFrameworkCore;
 
 namespace Application.Enrollments.Commands.CancelEnrollment;
 
-internal sealed class CancelEnrollmentCommandHandler(IApplicationDbContext db)
+internal sealed class CancelEnrollmentCommandHandler(IEnrollmentRepository enrollments, IUnitOfWork unitOfWork)
     : ICommandHandler<CancelEnrollmentCommand, Result>
 {
     public async Task<Result> HandleAsync(CancelEnrollmentCommand command, CancellationToken cancellationToken)
     {
-        var registration = await (
-            from enrollment in db.Enrollments
-            join course in db.Courses on enrollment.CourseId equals course.Id
-            where enrollment.StudentId == command.StudentId && enrollment.CourseId == command.CourseId
-            select new { Enrollment = enrollment, Course = course }
-        ).SingleOrDefaultAsync(cancellationToken);
+        var registration = await enrollments.GetForCancellationAsync(
+            command.StudentId, command.CourseId, cancellationToken);
         if (registration is null)
         {
             return Result.Failure(EnrollmentErrors.NotFound);
         }
 
         registration.Course.CancelEnrollment(registration.Enrollment);
-        db.RemoveEnrollment(registration.Enrollment);
-
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken);
-            return Result.Success();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Result.Failure(EnrollmentErrors.ConcurrencyConflict);
-        }
+        enrollments.Remove(registration.Enrollment);
+        var result = await unitOfWork.SaveChangesAsync(cancellationToken);
+        return result.Error == PersistenceErrors.ConcurrencyConflict
+            ? Result.Failure(EnrollmentErrors.ConcurrencyConflict)
+            : result;
     }
 }

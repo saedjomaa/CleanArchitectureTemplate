@@ -11,7 +11,7 @@ public static class DependencyInjection
     {
         services.AddSingleton(TimeProvider.System);
 
-        services.Scan(scan => scan.FromAssemblyOf<IApplicationDbContext>()
+        services.Scan(scan => scan.FromAssemblies(typeof(DependencyInjection).Assembly)
             .AddClasses(classes => classes
                 .AssignableToAny(typeof(ICommandHandler<,>), typeof(IQueryHandler<,>))
                 .Where(type => !type.IsGenericTypeDefinition), publicOnly: false)

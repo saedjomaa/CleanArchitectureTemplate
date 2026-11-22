@@ -2,27 +2,28 @@
 
 ## Stack
 - .NET 11, ASP.NET Core Web API with **Controllers**
-- Clean Architecture + CQRS
+- Clean Architecture + CQRS + Repository Pattern
 - **No MediatR/Mediator. No AutoMapper** (manual mapping only)
 - FluentValidation, EF Core, Scrutor, Serilog
 
 ## Layers (dependencies point inward only)
 - `Domain`: entities, enums, domain exceptions. References nothing.
-- `Application`: commands, queries, handlers, validators, mappings, interfaces (e.g. `IApplicationDbContext`). References Domain.
-- `Infrastructure`: EF Core, migrations, external services. Implements Application interfaces.
+- `Application`: commands, queries, handlers, validators, mappings, repository interfaces, and `IUnitOfWork`. References Domain.
+- `Infrastructure`: EF Core, repositories, migrations, and external services. Implements Application interfaces.
 - `WebAPI`: controllers, `Program.cs`. Composition root.
 
-Handlers depend on interfaces, never on concrete `DbContext` or Infrastructure types.
+Handlers depend on repository and unit-of-work interfaces. Keep EF Core queries and provider errors in Infrastructure.
 
 ## EF Core Entity Configuration
 - Each persisted entity must define its EF Core mapping in `[EntityName]Configuration.cs` under `Infrastructure/Persistence/Configurations` using `IEntityTypeConfiguration<TEntity>`.
 - `OnModelCreating` must apply these configurations and call `SchoolSeed.Configure(modelBuilder)`.
+- Implement repositories in `Infrastructure/Persistence/Repositories`. Register repositories and the unit of work as scoped services sharing the same DbContext.
 
 ## Application Structure
 ```
 Application/
   Common/
-    Abstractions/   (ICommandHandler, IQueryHandler, IApplicationDbContext)
+    Abstractions/   (handler interfaces, repository interfaces, IUnitOfWork)
     Results/        (Result, Error)
   [Module]/
     Commands/[UseCaseName]/
@@ -40,7 +41,7 @@ Application/
 - `[UseCaseName]Mapping.cs` only if 2+ mappings; otherwise map inside the handler
 
 ## Rules
-- Commands change state and return `Result<T>` when there is a response payload (e.g. `Result<Guid>` for a created entity ID), or `Result` when there is no payload. Queries are read-only and return `Result<TResponse>`. For EF Core queries, use `AsNoTracking()` and project directly to the response with `Select`.
+- Commands change state and return `Result<T>` when there is a response payload (e.g. `Result<Guid>` for a created entity ID), or `Result` when there is no payload. Queries are read-only and return `Result<TResponse>`. Repositories use `AsNoTracking()` and project directly to response types for EF Core reads.
 - Commands and queries are plain records. No marker interfaces.
 - Handlers: `internal sealed`, primary constructor, return `Result` or `Result<T>` according to the command or query contract, always pass `CancellationToken`.
 - For expected failures (NotFound, Validation, Conflict), return a failed `Result` or `Result<T>` containing an `Error`.
@@ -56,14 +57,14 @@ Application/
 - Never return stack traces or exception messages to the client. Log the exception server-side.
 
 **Transactions**
-- One `SaveChangesAsync` per command is the default and is already atomic.
-- If a command needs multiple saves/operations in one transaction, open an explicit transaction inside that handler. No global transaction decorator.
+- Commit each command once through `IUnitOfWork.SaveChangesAsync` by default. Repositories stage changes on the shared DbContext.
+- If a command needs multiple saves in one transaction, expose that transaction through an Application interface and coordinate it within the handler.
 
 **Concurrency**
 - Use a concurrency token (`RowVersion`) on entities that support concurrent edits.
 - Include `rowVersion` in read responses and require it in update requests.
 - Use the client-supplied `rowVersion` as the expected version when saving the update.
-- Return a `Conflict` error (HTTP 409) if the version is stale or EF Core raises `DbUpdateConcurrencyException`.
+- Translate EF Core concurrency exceptions in Infrastructure. Return a `Conflict` error (HTTP 409) when the version is stale or persistence detects a concurrency conflict.
 
 **Pagination and filtering**
 - Every list query returns `Result<PagedResult<T>>` (items, page, pageSize, totalCount).

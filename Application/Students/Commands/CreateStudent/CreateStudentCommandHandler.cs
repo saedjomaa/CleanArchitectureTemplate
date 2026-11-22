@@ -4,15 +4,15 @@ using Domain.Entities;
 
 namespace Application.Students.Commands.CreateStudent;
 
-internal sealed class CreateStudentCommandHandler(IApplicationDbContext db)
+internal sealed class CreateStudentCommandHandler(IStudentRepository students, IUnitOfWork unitOfWork)
     : ICommandHandler<CreateStudentCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> HandleAsync(CreateStudentCommand command, CancellationToken cancellationToken)
     {
         var student = Student.Create(command.FullName);
-        db.AddStudent(student);
-        await db.SaveChangesAsync(cancellationToken);
+        students.Add(student);
+        var result = await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<Guid>.Success(student.Id);
+        return result.IsSuccess ? Result<Guid>.Success(student.Id) : Result<Guid>.Failure(result.Error!);
     }
 }

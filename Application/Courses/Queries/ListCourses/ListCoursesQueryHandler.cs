@@ -1,22 +1,15 @@
 using Application.Common.Abstractions;
-using Application.Common.Pagination;
 using Application.Common.Results;
-using Microsoft.EntityFrameworkCore;
 
 namespace Application.Courses.Queries.ListCourses;
 
-internal sealed class ListCoursesQueryHandler(IApplicationDbContext db)
+internal sealed class ListCoursesQueryHandler(ICourseRepository courses)
     : IQueryHandler<ListCoursesQuery, Result<PagedResult<CourseResponse>>>
 {
     public async Task<Result<PagedResult<CourseResponse>>> HandleAsync(
         ListCoursesQuery query, CancellationToken cancellationToken)
     {
-        var page = await db.Courses.AsNoTracking()
-            .OrderBy(course => course.Title)
-            .ThenBy(course => course.Id)
-            .Select(course => new CourseResponse(
-                course.Id, course.Title, course.Capacity, course.EnrolledCount, course.RowVersion))
-            .ToPageAsync(query.Page, query.PageSize, cancellationToken);
+        var page = await courses.ListAsync(query.Page, query.PageSize, cancellationToken);
 
         return Result<PagedResult<CourseResponse>>.Success(page);
     }
