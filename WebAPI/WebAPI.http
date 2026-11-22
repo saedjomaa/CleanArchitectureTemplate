@@ -49,17 +49,18 @@ Content-Type: application/json
 
 ###
 
-# Create a course
+# Create a course with twelve seats
 POST {{WebAPI_HostAddress}}/api/courses
 Content-Type: application/json
 
 {
-  "title": "Software Design"
+  "title": "Software Design",
+  "capacity": 12
 }
 
 ###
 
-# CreateEnrollment for Database Fundamentals (expected HTTP 204)
+# Enroll in Database Fundamentals (expected HTTP 204)
 POST {{WebAPI_HostAddress}}/api/students/{{studentId}}/enrollments
 Content-Type: application/json
 
@@ -69,7 +70,7 @@ Content-Type: application/json
 
 ###
 
-# CreateEnrollment for ASP.NET Core Web API (expected HTTP 204)
+# Enroll in ASP.NET Core Web API (expected HTTP 204)
 POST {{WebAPI_HostAddress}}/api/students/{{studentId}}/enrollments
 Content-Type: application/json
 
@@ -85,7 +86,7 @@ Accept: application/json
 
 ###
 
-# Repeat CreateEnrollment for Database Fundamentals (expected HTTP 409)
+# Repeat enrollment in Database Fundamentals (expected HTTP 409)
 POST {{WebAPI_HostAddress}}/api/students/{{studentId}}/enrollments
 Content-Type: application/json
 
@@ -95,5 +96,22 @@ Content-Type: application/json
 
 ###
 
-# Health check
+# Get the Database Fundamentals enrollment
+GET {{WebAPI_HostAddress}}/api/students/{{studentId}}/enrollments/{{databaseCourseId}}
+Accept: application/json
+
+###
+
+# Cancel the Database Fundamentals enrollment and release the seat (expected HTTP 204)
+DELETE {{WebAPI_HostAddress}}/api/students/{{studentId}}/enrollments/{{databaseCourseId}}
+
+###
+
+# Get the canceled enrollment (expected HTTP 404)
+GET {{WebAPI_HostAddress}}/api/students/{{studentId}}/enrollments/{{databaseCourseId}}
+Accept: application/json
+
+###
+
+# Check API and SQLite readiness
 GET {{WebAPI_HostAddress}}/health

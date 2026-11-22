@@ -11,6 +11,12 @@ public static class DependencyInjection
     {
         services.AddDbContext<SchoolDbContext>(options => options.UseSqlite(connectionString));
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<SchoolDbContext>());
+        services.AddHealthChecks().AddDbContextCheck<SchoolDbContext>("database",
+            customTestQuery: async (db, cancellationToken) =>
+            {
+                await db.Courses.AnyAsync(cancellationToken);
+                return true;
+            });
 
         return services;
     }

@@ -14,7 +14,8 @@ internal sealed class ListCoursesQueryHandler(IApplicationDbContext db)
         var page = await db.Courses.AsNoTracking()
             .OrderBy(course => course.Title)
             .ThenBy(course => course.Id)
-            .Select(course => new CourseResponse(course.Id, course.Title))
+            .Select(course => new CourseResponse(
+                course.Id, course.Title, course.Capacity, course.EnrolledCount, course.RowVersion))
             .ToPageAsync(query.Page, query.PageSize, cancellationToken);
 
         return Result<PagedResult<CourseResponse>>.Success(page);

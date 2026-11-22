@@ -8,7 +8,7 @@ public sealed class Enrollment
     public Guid CourseId { get; private set; }
     public DateTimeOffset EnrolledAt { get; private set; }
 
-    public static Enrollment Create(Guid studentId, Guid courseId, DateTimeOffset enrolledAt)
+    internal static Enrollment Create(Guid studentId, Guid courseId, DateTimeOffset enrolledAt)
     {
         return new Enrollment
         {

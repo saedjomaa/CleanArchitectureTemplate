@@ -9,7 +9,7 @@ internal sealed class CreateCourseCommandHandler(IApplicationDbContext db)
 {
     public async Task<Result<Guid>> HandleAsync(CreateCourseCommand command, CancellationToken cancellationToken)
     {
-        var course = Course.Create(command.Title);
+        var course = Course.Create(command.Title, command.Capacity);
         db.AddCourse(course);
         await db.SaveChangesAsync(cancellationToken);
 

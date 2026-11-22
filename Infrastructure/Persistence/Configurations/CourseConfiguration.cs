@@ -13,5 +13,6 @@ internal sealed class CourseConfiguration : IEntityTypeConfiguration<Course>
         builder.Property(course => course.Title)
             .HasMaxLength(Course.MaximumTitleLength)
             .IsRequired();
+        builder.Property(course => course.RowVersion).IsConcurrencyToken();
     }
 }

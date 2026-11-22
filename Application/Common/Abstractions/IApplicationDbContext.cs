@@ -10,6 +10,7 @@ public interface IApplicationDbContext
 
     void AddStudent(Student student);
     void AddCourse(Course course);
+    void RemoveEnrollment(Enrollment enrollment);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
     Task<bool> TrySaveEnrollmentAsync(Enrollment enrollment, CancellationToken cancellationToken);
 }

@@ -14,7 +14,6 @@ builder.Services.AddSerilog((services, logging) => logging
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
 builder.Services.AddProblemDetails(options =>
     options.CustomizeProblemDetails = context =>
         context.ProblemDetails.Extensions["correlationId"] = context.HttpContext.TraceIdentifier);
@@ -28,6 +27,7 @@ var app = builder.Build();
 await app.Services.MigrateDatabaseAsync(app.Lifetime.ApplicationStopping);
 
 app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseSerilogRequestLogging();
 app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {

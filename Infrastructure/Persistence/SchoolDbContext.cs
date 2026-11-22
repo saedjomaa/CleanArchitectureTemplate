@@ -18,6 +18,8 @@ internal sealed class SchoolDbContext(DbContextOptions<SchoolDbContext> options)
 
     public void AddCourse(Course course) => Set<Course>().Add(course);
 
+    public void RemoveEnrollment(Enrollment enrollment) => Set<Enrollment>().Remove(enrollment);
+
     public async Task<bool> TrySaveEnrollmentAsync(Enrollment enrollment, CancellationToken cancellationToken)
     {
         var entry = Set<Enrollment>().Add(enrollment);

@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="AGENTS.md" />
+    <File Path="Directory.Build.props" />
     <File Path="Requirements.md" />
   </Folder>
   <Project Path="Application/Application.csproj" Id="93bf2595-936f-43ef-a4d5-39e830b74988" />

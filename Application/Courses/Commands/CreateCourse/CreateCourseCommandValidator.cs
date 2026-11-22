@@ -8,5 +8,6 @@ internal sealed class CreateCourseCommandValidator : AbstractValidator<CreateCou
     public CreateCourseCommandValidator()
     {
         RuleFor(command => command.Title).NotEmpty().MaximumLength(Course.MaximumTitleLength);
+        RuleFor(command => command.Capacity).GreaterThan(0);
     }
 }
