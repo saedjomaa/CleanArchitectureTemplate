@@ -14,6 +14,10 @@
 
 Handlers depend on interfaces, never on concrete `DbContext` or Infrastructure types.
 
+## EF Core Entity Configuration
+- Each persisted entity must define its EF Core mapping in `[EntityName]Configuration.cs` under `Infrastructure/Persistence/Configurations` using `IEntityTypeConfiguration<TEntity>`.
+- `OnModelCreating` must apply these configurations and call `SchoolSeed.Configure(modelBuilder)`.
+
 ## Application Structure
 ```
 Application/

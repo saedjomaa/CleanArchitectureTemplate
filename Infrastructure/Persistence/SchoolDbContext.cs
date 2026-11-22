@@ -37,22 +37,7 @@ internal sealed class SchoolDbContext(DbContextOptions<SchoolDbContext> options)
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        var students = modelBuilder.Entity<Student>();
-        students.ToTable("Students");
-        students.HasKey(student => student.Id);
-        students.Property(student => student.FullName).HasMaxLength(Student.MaximumFullNameLength).IsRequired();
-
-        var courses = modelBuilder.Entity<Course>();
-        courses.ToTable("Courses");
-        courses.HasKey(course => course.Id);
-        courses.Property(course => course.Title).HasMaxLength(Course.MaximumTitleLength).IsRequired();
-
-        var enrollments = modelBuilder.Entity<Enrollment>();
-        enrollments.ToTable("Enrollments");
-        enrollments.HasKey(enrollment => new { enrollment.StudentId, enrollment.CourseId });
-        enrollments.HasOne<Student>().WithMany().HasForeignKey(enrollment => enrollment.StudentId);
-        enrollments.HasOne<Course>().WithMany().HasForeignKey(enrollment => enrollment.CourseId);
-
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(SchoolDbContext).Assembly);
         SchoolSeed.Configure(modelBuilder);
     }
 }
