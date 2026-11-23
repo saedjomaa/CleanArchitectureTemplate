@@ -90,3 +90,4 @@ Technical facts specific to this project. `AGENTS.md` is generic and refers to t
 - Database provider: SQLite, connection string `School` = `Data Source=school.db;Foreign Keys=True` (file created next to the WebAPI project). `SchoolUnitOfWork` maps SQLite extended error codes `1555` (primary key) and `2067` (unique) to `PersistenceErrors.DuplicateKey`.
 - Solution file: `CleanArchitectureTemplate.slnx`.
 - Known exception: migration `20261120061000_InitialSchool` was written by hand and has no `.Designer.cs` file. Do not copy that style; create new migrations with the EF Core CLI.
+- EF Core sensitive data logging is **enabled in all environments** (`Database:EnableSensitiveDataLogging = true` in `appsettings.json`), by the project owner's decision. Log files therefore contain SQL parameter values such as student names. To disable it in one environment, set it to `false` in `appsettings.{Environment}.json`.
