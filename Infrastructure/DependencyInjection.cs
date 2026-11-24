@@ -1,8 +1,11 @@
 using Application.Common.Abstractions;
 using Domain.Entities;
+using Infrastructure.ExternalServices;
+using Infrastructure.ExternalServices.JsonPlaceholder;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure;
 
@@ -26,6 +29,17 @@ public static class DependencyInjection
                 await db.Set<Course>().AnyAsync(cancellationToken);
                 return true;
             });
+
+        // External services: one shared timeout for all clients.
+        // Not added to /health: an external outage does not mean this application is unhealthy.
+        services.AddOptions<ExternalServicesOptions>().BindConfiguration(ExternalServicesOptions.SectionName);
+        services.AddOptions<JsonPlaceholderOptions>().BindConfiguration(JsonPlaceholderOptions.SectionName);
+        services.AddHttpClient<IJsonPlaceholderClient, JsonPlaceholderClient>((provider, client) =>
+        {
+            client.BaseAddress = new Uri(provider.GetRequiredService<IOptions<JsonPlaceholderOptions>>().Value.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(
+                provider.GetRequiredService<IOptions<ExternalServicesOptions>>().Value.TimeoutSeconds);
+        });
 
         return services;
     }
